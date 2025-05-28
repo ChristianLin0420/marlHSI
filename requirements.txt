@@ -10,6 +10,7 @@ joblib
 tqdm
 smplx==0.1.28
 open3d==0.18.0
+wandb>=0.15.0
 # dependencies for scenepic (see https://github.com/microsoft/scenepic/blob/main/requirements.txt)
 scenepic==1.1.0
 opencv-python==4.10.0.84

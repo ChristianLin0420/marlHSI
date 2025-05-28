@@ -688,6 +688,21 @@ class AMPAgent(common_agent.CommonAgent):
         disc_reward_std, disc_reward_mean = torch.std_mean(train_info['disc_rewards'])
         self.writer.add_scalar('info/disc_reward_mean', disc_reward_mean.item(), frame)
         self.writer.add_scalar('info/disc_reward_std', disc_reward_std.item(), frame)
+        
+        # Log AMP-specific metrics to wandb
+        amp_metrics = {
+            'losses/disc_loss': torch_ext.mean_list(train_info['disc_loss']).item(),
+            'info/disc_agent_acc': torch_ext.mean_list(train_info['disc_agent_acc']).item(),
+            'info/disc_demo_acc': torch_ext.mean_list(train_info['disc_demo_acc']).item(),
+            'info/disc_agent_logit': torch_ext.mean_list(train_info['disc_agent_logit']).item(),
+            'info/disc_demo_logit': torch_ext.mean_list(train_info['disc_demo_logit']).item(),
+            'info/disc_grad_penalty': torch_ext.mean_list(train_info['disc_grad_penalty']).item(),
+            'info/disc_logit_loss': torch_ext.mean_list(train_info['disc_logit_loss']).item(),
+            'info/disc_reward_mean': disc_reward_mean.item(),
+            'info/disc_reward_std': disc_reward_std.item()
+        }
+        self.wandb_logger.log_metrics(amp_metrics, step=frame)
+        
         return
 
     def _amp_debug(self, info):

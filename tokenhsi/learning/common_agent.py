@@ -51,6 +51,7 @@ import learning.amp_datasets as amp_datasets
 from tensorboardX import SummaryWriter
 
 from utils.torch_utils import load_checkpoint
+from learning.wandb_logger import WandbLogger
 
 class CommonAgent(a2c_continuous.A2CAgent):
     def __init__(self, base_name, config):
@@ -60,6 +61,9 @@ class CommonAgent(a2c_continuous.A2CAgent):
         
         # save random seed
         np.savetxt(os.path.join(self.experiment_dir, "random_seed.txt"), [config["seed"]])
+
+        # Initialize wandb logger
+        self.wandb_logger = WandbLogger(config, enabled=True)
 
         self.is_discrete = False
         self._setup_action_space()
@@ -160,6 +164,25 @@ class CommonAgent(a2c_continuous.A2CAgent):
                     mean_rewards = self._get_mean_rewards()
                     mean_lengths = self.game_lengths.get_mean()
 
+                    # Prepare multi-task rewards for wandb
+                    multi_task_rewards_dict = None
+                    if hasattr(self.vec_env.env.task, '_multiple_task_names'):
+                        multi_task_rewards_dict = {}
+                        for n in self.vec_env.env.task._multiple_task_names:
+                            curr_task_mean_rewards = self.multi_task_rwd_recoders[n].get_mean()
+                            if curr_task_mean_rewards.shape != ():
+                                multi_task_rewards_dict[n] = curr_task_mean_rewards
+
+                    # Log to wandb
+                    self.wandb_logger.log_training_metrics(
+                        train_info=train_info,
+                        frame=frame,
+                        epoch=epoch_num,
+                        mean_rewards=mean_rewards,
+                        mean_lengths=mean_lengths,
+                        multi_task_rewards=multi_task_rewards_dict
+                    )
+
                     for i in range(self.value_size):
                         self.writer.add_scalar('rewards{0}/frame'.format(i), mean_rewards[i], frame)
                         self.writer.add_scalar('rewards{0}/iter'.format(i), mean_rewards[i], epoch_num)
@@ -182,6 +205,9 @@ class CommonAgent(a2c_continuous.A2CAgent):
                 if self.save_freq > 0:
                     if (epoch_num % self.save_freq == 0):
                         self.save(model_output_file)
+                        # Log model to wandb
+                        self.wandb_logger.save_model(model_output_file + '.pth', 
+                                                   metadata={'epoch': epoch_num, 'frame': frame})
 
                         if (self._save_intermediate):
                             int_model_output_file = model_output_file + '_' + str(epoch_num).zfill(8)
@@ -189,6 +215,11 @@ class CommonAgent(a2c_continuous.A2CAgent):
 
                 if epoch_num > self.max_epochs:
                     self.save(model_output_file)
+                    # Log final model to wandb
+                    self.wandb_logger.save_model(model_output_file + '.pth', 
+                                               metadata={'epoch': epoch_num, 'frame': frame, 'final': True})
+                    # Finish wandb run
+                    self.wandb_logger.finish()
                     print('MAX EPOCHS NUM!')
                     return self.last_mean_rewards, epoch_num
 

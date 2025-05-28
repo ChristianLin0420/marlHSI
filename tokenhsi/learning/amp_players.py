@@ -35,6 +35,7 @@ from rl_games.algos_torch.running_mean_std import RunningMeanStd
 
 import learning.common_player as common_player
 from utils.torch_utils import load_checkpoint
+from learning.wandb_logger import WandbLogger
 
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
@@ -49,6 +50,13 @@ class AMPPlayerContinuous(common_player.CommonPlayer):
         self._disc_reward_scale = config['disc_reward_scale']
         
         super().__init__(config)
+        
+        # Initialize wandb logger for evaluation
+        if self._eval:
+            eval_config = config.copy()
+            eval_config['wandb'] = config.get('wandb', {})
+            eval_config['wandb']['job_type'] = 'eval'
+            self.wandb_logger = WandbLogger(eval_config, enabled=config.get('use_wandb', False))
 
         return
 
@@ -254,5 +262,21 @@ class AMPPlayerContinuous(common_player.CommonPlayer):
         os.makedirs(save_dir, exist_ok=True)
         json.dump(eval_res, open(os.path.join(save_dir, "metrics_{}.json".format(time)), 'w'))
         print("save at {}".format(os.path.join(save_dir, "metrics_{}.json".format(time))))
+        
+        # Log evaluation results to wandb
+        if hasattr(self, 'wandb_logger'):
+            # Get frame number from checkpoint name if possible
+            frame = 0
+            try:
+                # Try to extract frame number from checkpoint name (e.g., "model_00001000.pth")
+                import re
+                match = re.search(r'_(\d+)\.pth', ckp_name)
+                if match:
+                    frame = int(match.group(1))
+            except:
+                pass
+            
+            self.wandb_logger.log_evaluation_metrics(eval_res, frame)
+            self.wandb_logger.finish()
 
         return
