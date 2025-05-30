@@ -1,0 +1,85 @@
+# Multi-stage Dockerfile for MARL HSI - Optimized for production
+
+# Stage 1: Build environment
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Miniconda
+RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
+    bash miniconda.sh -b -p /opt/conda && \
+    rm miniconda.sh
+
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Create conda environment and install dependencies
+COPY requirements.txt /tmp/
+RUN conda create -n marlhsi python=3.8 -y && \
+    /opt/conda/envs/marlhsi/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Install PyTorch
+RUN /opt/conda/envs/marlhsi/bin/pip install torch==2.0.0 torchvision==0.15.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cu118
+
+# Install pytorch3d
+RUN /opt/conda/envs/marlhsi/bin/pip install fvcore iopath && \
+    /opt/conda/envs/marlhsi/bin/pip install --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.7"
+
+# Stage 2: Runtime environment
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/opt/conda/envs/marlhsi/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/conda/envs/marlhsi/lib:$LD_LIBRARY_PATH"
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libglu1-mesa \
+    libxi6 \
+    libxcursor1 \
+    libxdamage1 \
+    libxrandr2 \
+    libxinerama1 \
+    libx11-6 \
+    libxkbcommon-x11-0 \
+    libegl1 \
+    libopengl0 \
+    libglfw3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy conda environment from builder
+COPY --from=builder /opt/conda/envs/marlhsi /opt/conda/envs/marlhsi
+
+# Set working directory
+WORKDIR /workspace/marlhsi
+
+# Copy application code
+COPY tokenhsi/ ./tokenhsi/
+COPY lpanlib/ ./lpanlib/
+COPY assets/ ./assets/
+
+# Create necessary directories
+RUN mkdir -p output/imgs body_models/smpl data
+
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+source /opt/conda/envs/marlhsi/bin/activate\n\
+exec "$@"' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"] 

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  marlhsi:
+    # Replace <your-dockerhub-username> with your actual Docker Hub username
+    image: <your-dockerhub-username>/marlhsi:latest
+    
+    # For local development, you can use the locally built image instead:
+    # image: marlhsi:latest
+    
+    runtime: nvidia
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DISPLAY=${DISPLAY}
+    
+    volumes:
+      # Mount required directories
+      - ./body_models:/workspace/marlhsi/body_models
+      - ./data:/workspace/marlhsi/data
+      - ./output:/workspace/marlhsi/output
+      
+      # For GUI support
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      
+      # Optional: Mount IsaacGym installation directory
+      # - /path/to/IsaacGym_Preview_4_Package:/workspace/isaacgym
+    
+    devices:
+      - /dev/dri
+    
+    # Keep container running
+    stdin_open: true
+    tty: true
+    
+    # Optional: Set working directory
+    working_dir: /workspace/marlhsi
+    
+    # Optional: Override default command
+    # command: bash tokenhsi/scripts/tokenhsi/stage1_test.sh 
