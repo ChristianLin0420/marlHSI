@@ -2,29 +2,30 @@ version: '3.8'
 
 services:
   marlhsi:
-    # Replace <your-dockerhub-username> with your actual Docker Hub username
-    image: <your-dockerhub-username>/marlhsi:latest
-    
-    # For local development, you can use the locally built image instead:
-    # image: marlhsi:latest
+    # Use locally built image with Isaac Gym
+    image: marlhsi:latest
     
     runtime: nvidia
     
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - DISPLAY=${DISPLAY}
+      - PYTHONUNBUFFERED=1
+      # Optional: Add your WandB API key for logging
+      # - WANDB_API_KEY=your_api_key_here
     
     volumes:
-      # Mount required directories
-      - ./body_models:/workspace/marlhsi/body_models
-      - ./data:/workspace/marlhsi/data
+      # Mount project directories
+      - ./tokenhsi:/workspace/marlhsi/tokenhsi
       - ./output:/workspace/marlhsi/output
+      - ./body_models:/workspace/marlhsi/body_models
+      - ./assets:/workspace/marlhsi/assets
       
-      # For GUI support
+      # For GUI support (if needed)
       - /tmp/.X11-unix:/tmp/.X11-unix
       
-      # Optional: Mount IsaacGym installation directory
-      # - /path/to/IsaacGym_Preview_4_Package:/workspace/isaacgym
+      # Optional: Mount WandB cache
+      - ~/.wandb:/root/.wandb
     
     devices:
       - /dev/dri
@@ -33,8 +34,52 @@ services:
     stdin_open: true
     tty: true
     
-    # Optional: Set working directory
+    # Set working directory
     working_dir: /workspace/marlhsi
     
-    # Optional: Override default command
-    # command: bash tokenhsi/scripts/tokenhsi/stage1_test.sh 
+    # Shared memory size for multi-environment training
+    shm_size: '8gb'
+    
+    # Memory and CPU limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 16G
+    
+    # Override default command for training
+    command: >
+      bash -c "source /opt/conda/etc/profile.d/conda.sh && 
+               conda activate marlhsi && 
+               echo 'marlHSI Docker Container Ready!' &&
+               echo 'Isaac Gym status:' &&
+               python -c 'import isaacgym; print(\"✓ Isaac Gym available\")' 2>/dev/null || echo '✗ Isaac Gym not available (using PyBullet)' &&
+               echo 'Available commands:' &&
+               echo '  Training: python tokenhsi/run.py --task HumanoidTraj --headless' &&
+               echo '  Training with WandB: python tokenhsi/run.py --task HumanoidTraj --cfg_train tokenhsi/data/cfg/train/rlg/amp_imitation_task_wandb.yaml --headless' &&
+               echo '  Interactive shell: docker-compose exec marlhsi bash' &&
+               /bin/bash"
+
+  # Optional: Development service with mounted source code
+  marlhsi-dev:
+    image: marlhsi:latest
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount entire project for development
+      - .:/workspace/marlhsi
+      - ~/.wandb:/root/.wandb
+    working_dir: /workspace/marlhsi
+    stdin_open: true
+    tty: true
+    shm_size: '8gb'
+    profiles:
+      - dev
+    command: >
+      bash -c "source /opt/conda/etc/profile.d/conda.sh && 
+               conda activate marlhsi && 
+               echo 'Development container ready!' &&
+               /bin/bash" 
