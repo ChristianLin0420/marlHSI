@@ -115,3 +115,21 @@ params:
 
     reg_loss_coef: 0.01 # limit compensate composer
     reg_loss_enabled: False
+
+    # Enable wandb logging
+    use_wandb: True
+
+    # Wandb configuration
+    wandb:
+      project: "tokenHSI-adaptation"
+      entity: null  # Set to your wandb username/team
+      name: "skill-adaptation-transformer"
+      tags: 
+        - "transformer"
+        - "adaptation"
+        - "humanoid"
+        - "amp"
+      notes: "Training skill adaptation with transformer architecture"
+      mode: "online"  # online, offline, or disabled
+      group: "adaptation"
+      job_type: "train"

@@ -1,8 +1,26 @@
-# if given, will override the device setting in gym. 
+# Enable wandb logging
+use_wandb: True
+
+# Wandb configuration
+wandb:
+  project: "tokenHSI-humanoid-climb"
+  entity: null  # Set to your wandb username/team
+  name: "humanoid-climb-amp"
+  tags: 
+    - "amp"
+    - "humanoid"
+    - "climb"
+    - "basic_skill"
+  notes: "Training humanoid climbing with AMP"
+  mode: "online"  # online, offline, or disabled
+  group: "basic_skills"
+  job_type: "train"
+
+# Environment configuration
 env: 
   numEnvs: 4096
   envSpacing: 5
-  episodeLength: 300
+  episodeLength: 600 # 20s
   isFlagrun: False
   enableDebugVis: False
   
@@ -25,37 +43,24 @@ env:
   enableSelfCollisionDetection: True
   enableTrackInitState: False
 
-  skill: ["loco", "climb", "climbNoRSI"]
-  skillInitProb: [0.5, 0.5, 0.0]
-  skillDiscProb: [0.3, 0.4, 0.3]
-
-  enableTaskObs: True
-
-  # object
-  mode: "train"
-  objCategories: 
-    - "Box"
-    - "Cabinet"
-    - "Table_Square"
-
-  # IET: Interaction Early Termination
-  enableIET: True
-  maxIETSteps: 60
-  successThreshold: 0.2
-
   # power reward
   power_reward: True
   power_coefficient: 0.0005
 
-  climb_vel_penalty: True
-  climb_vel_pen_coeff: 1.0
-  climb_vel_pen_threshold: 1.3
+  skill: ["omomo", "loco", "climb"]
+  skillInitProb: [0.0, 0.5, 0.5]
+  skillDiscProb: [0.1, 0.45, 0.45]
+
+  # task
+  enableTaskObs: True
+
+  mode: "train"
 
   eval:
     # override env settings
     successThreshold: 0.2
-    skill: ["loco", "climb", "climbNoRSI"]
-    skillInitProb: [1.0, 0.0, 0.0]
+    skill: ["loco"]
+    skillInitProb: [1.0]
 
   asset:
     assetRoot: "tokenhsi/data/assets"

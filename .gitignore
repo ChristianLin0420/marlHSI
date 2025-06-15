@@ -166,6 +166,5 @@ cython_debug/
 /tokenhsi/data/dataset_dynamic_objects/test/
 /tokenhsi/data/dataset_dynamic_objects/train/
 
-TokenHSI/
-
+# wandb
 wandb/

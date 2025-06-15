@@ -113,3 +113,22 @@ params:
 
     reg_loss_coef: 0.01 # limit compensate composer
     reg_loss_enabled: False
+
+    # Enable wandb logging
+    use_wandb: True
+
+    # Wandb configuration
+    wandb:
+      project: "tokenHSI-longterm"
+      entity: null  # Set to your wandb username/team
+      name: "longterm-task-completion"
+      tags: 
+        - "transformer"
+        - "longterm"
+        - "task-completion"
+        - "humanoid"
+        - "amp"
+      notes: "Training long-term task completion with transformer architecture"
+      mode: "online"  # online, offline, or disabled
+      group: "longterm"
+      job_type: "train"

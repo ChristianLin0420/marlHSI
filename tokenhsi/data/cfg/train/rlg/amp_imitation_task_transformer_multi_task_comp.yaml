@@ -111,3 +111,21 @@ params:
 
     task_reward_w: 0.5
     disc_reward_w: 0.5
+
+    # Enable wandb logging
+    use_wandb: True
+
+    # Wandb configuration
+    wandb:
+      project: "tokenHSI-skill-composition"
+      entity: null  # Set to your wandb username/team
+      name: "skill-composition-transformer"
+      tags: 
+        - "transformer"
+        - "skill-composition"
+        - "humanoid"
+        - "amp"
+      notes: "Training skill composition with transformer architecture"
+      mode: "online"  # online, offline, or disabled
+      group: "skill_composition"
+      job_type: "train"

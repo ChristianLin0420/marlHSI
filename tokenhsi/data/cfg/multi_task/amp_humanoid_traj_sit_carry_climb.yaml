@@ -1,9 +1,30 @@
-# if given, will override the device setting in gym. 
+# Enable wandb logging
+use_wandb: True
+
+# Wandb configuration
+wandb:
+  project: "tokenHSI-multi-task"
+  entity: null  # Set to your wandb username/team
+  name: "multi-task-traj-sit-carry-climb"
+  tags: 
+    - "multi-task"
+    - "transformer"
+    - "humanoid"
+    - "amp"
+    - "trajectory"
+    - "sit"
+    - "carry"
+    - "climb"
+  notes: "Training multi-task humanoid skills: trajectory, sit, carry, climb"
+  mode: "online"  # online, offline, or disabled
+  group: "multi_task"
+  job_type: "train"
+
+# Environment configuration
 env: 
   numEnvs: 4096
   envSpacing: 5
-  episodeLength: 600
-  episodeLengthShort: 300
+  episodeLength: 300
   isFlagrun: False
   enableDebugVis: False
   
@@ -26,150 +47,69 @@ env:
   enableSelfCollisionDetection: True
   enableTrackInitState: False
 
-  mode: "train"
-  
-  skill: [
-    "loco", 
-    "loco_sit", "sit",
-    "loco_carry", "omomo", "pickUp", "carryWith", "putDown", 
-    "loco_climb", "climb", "climbNoRSI"
-  ]
-  skillDiscProb: [
-    0.1,
-    0.1, 0.2,
-    0.1, 0.1, 0.05, 0.0, 0.05,
-    0.1, 0.1, 0.1,
-  ]
-  commonSkill: ""
-  enableTaskSpecificDisc: True
-
-  # multi tasks
-  enableTaskObs: True
-  enableTaskMaskObs: True
-  enableApplyMaskOnTaskObs: True
-
-  task: ["traj", "sit", "carry", "climb"]
-  taskInitProb: [0.1, 0.3, 0.3, 0.3]
-
-  # IET: Interaction Early Termination
-  enableIET: True
-  maxIETSteps: 60
-  successThreshold: 0.2
- 
-  traj:
-    numTrajSamples: 10
-    trajSampleTimestep: 0.5 # 10 Hz
-    speedMin: 0.5
-    speedMax: 1.5
-    accelMax: 2.0
-    sharpTurnProb: 0.02
-    sharpTurnAngle: 1.57
-    failDist: 4.0
-    
-    skill: ["loco"]
-    skillInitProb: [1.0]
-
-    eval:
-      # override env settings
-      ## if the humanoid's root joint is close enough to the traj's final tar pos, 
-      ## the episode will be treated as successful.
-      successThreshold: 0.3
-      skill: ["loco"]
-      skillInitProb: [1.0]
-  
-  sit:
-    # object
-    objDatasetDir: "dataset_sit/objects"
-    objCategories: 
-      - "StraightChair_Normal"
-
-    sit_vel_penalty: True
-    sit_vel_pen_coeff: 0.5
-    sit_vel_pen_threshold: 1.3
-    sit_ang_vel_pen_coeff: 0.5
-    sit_ang_vel_pen_threshold: 3.0
-
-    # IET: Interaction Early Termination
-    enableIET: True
-
-    skill: ["loco_sit", "sit"]
-    skillInitProb: [0.5, 0.5]
-
-    eval:
-      # override env settings
-      skill: ["loco_sit", "sit"]
-      skillInitProb: [1.0, 0.0]
-
-  climb:
-    # object
-    objDatasetDir: "dataset_amass_climb/objects"
-    objCategories: 
-      - "Box"
-      - "Cabinet"
-      - "Table_Square"
-    
-    climb_vel_penalty: True
-    climb_vel_pen_coeff: 1.0
-    climb_vel_pen_threshold: 1.3
-
-    # IET: Interaction Early Termination
-    enableIET: True
-    
-    skill: ["loco_climb", "climb", "climbNoRSI"]
-    skillInitProb: [0.5, 0.5, 0.0]
-
-    eval:
-      # override env settings
-      skill: ["loco_climb", "climb", "climbNoRSI"]
-      skillInitProb: [1.0, 0.0, 0.0]
-
-  carry:
-    onlyVelReward: True
-    onlyHeightHandHeldReward: False
-
-    box_vel_penalty: True # to avoid stiff grasping
-    box_vel_pen_coeff: 1.0
-    box_vel_pen_threshold: 2.5
-
-    box:
-      build:
-        baseSize: [0.4, 0.4, 0.4] # unit: m
-        randomSize: True
-        randomModeEqualProportion: True
-        scaleRangeX: [0.5, 1.5] # default range if randomModeEqualProportion: True
-        scaleRangeY: [0.5, 1.5]
-        scaleRangeZ: [0.5, 1.5]
-        scaleSampleInterval: 0.125 # 0.05m
-
-        testSizes:
-        - [0.22, 0.22, 0.22]
-        - [0.27, 0.27, 0.27]
-        - [0.32, 0.32, 0.32]
-        - [0.37, 0.37, 0.37]
-        - [0.42, 0.42, 0.42]
-        - [0.47, 0.47, 0.47]
-        - [0.52, 0.52, 0.52]
-        - [0.57, 0.57, 0.57]
-        - [0.30, 0.30, 0.40]
-
-      reset:
-        randomRot: True
-        randomHeight: True
-        randomHeightProb: 0.5
-        maxTopSurfaceHeight: 1.2
-        minBottomSurfaceHeight: 0.0
-
-    skill: ["loco_carry", "pickUp", "carryWith", "putDown", "omomo"]
-    skillInitProb: [0.5, 0.1, 0.3, 0.1, 0.0]
-
-    eval:
-      # override env settings
-      skill: ["loco_carry", "pickUp", "carryWith", "putDown", "omomo"]
-      skillInitProb: [1.0, 0.0, 0.0, 0.0, 0.0]
-
   # power reward
   power_reward: True
   power_coefficient: 0.0005
+
+  # Multi-task configuration
+  enableTaskObs: True
+  enableTaskMaskObs: True
+  multipleTaskNames: ["traj", "sit", "carry", "climb"]
+  multipleTaskNamesDisc: ["loco", "sit", "carry", "climb"]
+  multipleTaskSampleProb: [0.25, 0.25, 0.25, 0.25]
+  multipleTaskSampleProbDisc: [0.25, 0.25, 0.25, 0.25]
+
+  # Trajectory following task
+  numTrajSamples: 10
+  trajSampleTimestep: 0.5
+  speedMin: 0.5
+  speedMax: 1.5
+  accelMax: 2.0
+  sharpTurnProb: 0.02
+  sharpTurnAngle: 1.57
+
+  # Carry task configuration
+  box:
+    build:
+      baseSize: [0.4, 0.4, 0.4]
+      randomSize: True
+      randomModeEqualProportion: True
+      scaleRangeX: [0.5, 1.5]
+      scaleRangeY: [0.5, 1.5]
+      scaleRangeZ: [0.5, 1.5]
+      scaleSampleInterval: 0.125
+      randomDensity: False
+
+    reset:
+      randomRot: True
+      randomHeight: True
+      randomHeightProb: 0.5
+      maxTopSurfaceHeight: 1.2
+
+    obs:
+      enableBboxObs: True
+
+  # Skill configuration for different tasks
+  skill_traj: ["loco_walkonly"]
+  skillInitProb_traj: [1.0]
+  skillDiscProb_traj: [1.0]
+
+  skill_sit: ["omomo", "loco", "sit"]
+  skillInitProb_sit: [0.0, 0.5, 0.5]
+  skillDiscProb_sit: [0.1, 0.45, 0.45]
+
+  skill_carry: ["omomo", "loco", "pickUp", "carryWith", "putDown"]
+  skillInitProb_carry: [0.0, 0.5, 0.1, 0.3, 0.1]
+  skillDiscProb_carry: [0.3, 0.3, 0.1, 0.1, 0.1]
+
+  skill_climb: ["omomo", "loco", "climb"]
+  skillInitProb_climb: [0.0, 0.5, 0.5]
+  skillDiscProb_climb: [0.1, 0.45, 0.45]
+
+  mode: "train"
+
+  eval:
+    successThreshold: 0.2
 
   asset:
     assetRoot: "tokenhsi/data/assets"
