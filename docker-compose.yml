@@ -16,7 +16,7 @@ services:
     
     volumes:
       # Mount project directories
-      - ./tokenhsi:/workspace/marlhsi/tokenhsi
+      - ./marlhsi:/workspace/marlhsi/marlhsi
       - ./output:/workspace/marlhsi/output
       - ./body_models:/workspace/marlhsi/body_models
       - ./assets:/workspace/marlhsi/assets
@@ -56,8 +56,8 @@ services:
                echo 'Isaac Gym status:' &&
                python -c 'import isaacgym; print(\"✓ Isaac Gym available\")' 2>/dev/null || echo '✗ Isaac Gym not available (using PyBullet)' &&
                echo 'Available commands:' &&
-               echo '  Training: python tokenhsi/run.py --task HumanoidTraj --headless' &&
-               echo '  Training with WandB: python tokenhsi/run.py --task HumanoidTraj --cfg_train tokenhsi/data/cfg/train/rlg/amp_imitation_task_wandb.yaml --headless' &&
+               echo '  Training: python marlhsi/run.py --task HumanoidTraj --headless' &&
+               echo '  Training with WandB: python marlhsi/run.py --task HumanoidTraj --cfg_train marlhsi/data/cfg/train/rlg/amp_imitation_task_wandb.yaml --headless' &&
                echo '  Interactive shell: docker-compose exec marlhsi bash' &&
                /bin/bash"
 

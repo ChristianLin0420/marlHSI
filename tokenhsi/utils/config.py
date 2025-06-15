@@ -118,8 +118,11 @@ def load_cfg(args):
                 exp_name += "_DR"
         else:
              exp_name = args.experiment
+    else:
+        # If no custom experiment name, use the task name directly
+        exp_name = args.task
 
-    # Override config name
+    # Override config name with task name or experiment name
     cfg_train["params"]["config"]['name'] = exp_name
 
     if args.resume > 0:
@@ -177,6 +180,8 @@ def load_cfg(args):
     cfg_train["params"]["seed"] = seed
 
     cfg["args"] = args
+    cfg_train["args"] = args  # Also add args to training config for WandbLogger
+    cfg_train["params"]["config"]["args"] = args  # Add args to the specific config section that gets passed to agents
 
     return cfg, cfg_train, logdir
 

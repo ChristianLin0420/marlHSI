@@ -96,14 +96,13 @@ params:
 
     # Wandb configuration
     wandb:
-      project: "tokenHSI-basic-skills"
+      project: null  # Will be dynamically set based on task
       entity: null  # Set to your wandb username/team
-      name: "basic-skills-amp"
+      name: null     # Will be dynamically set based on task
       tags: 
         - "amp"
         - "humanoid"
-        - "basic_skills"
-      notes: "Training basic humanoid skills with AMP"
+      notes: "Training humanoid skills with AMP"
       mode: "online"  # online, offline, or disabled
-      group: "basic_skills"
+      group: null    # Will be dynamically set based on task type
       job_type: "train"

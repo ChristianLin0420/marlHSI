@@ -5,7 +5,7 @@ FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 # Fix library path order to prioritize system libraries for critical components
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/conda/envs/marlhsi/lib"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/conda/envs/tokenhsi/lib"
 ENV PATH="/opt/conda/bin:$PATH"
 
 # Install system dependencies including ncurses libraries to prevent libtinfo conflicts
@@ -44,34 +44,34 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     rm miniconda.sh
 
 # Create conda environment
-RUN conda create -n marlhsi python=3.8 -y
+RUN conda create -n tokenhsi python=3.8 -y
 
 # Activate conda environment and install PyTorch
 SHELL ["/bin/bash", "-c"]
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     conda install pytorch==2.0.0 torchvision==0.15.0 torchaudio==2.0.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
 # Set working directory
-WORKDIR /workspace/marlhsi
+WORKDIR /workspace/tokenhsi
 
 # Copy requirements file first for better caching
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     pip install --no-cache-dir -r requirements.txt
 
 # Install pytorch3d (optional but included for long-horizon tasks)
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y && \
     pip install --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.7"
 
 # Install PyBullet as fallback physics engine
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     pip install pybullet>=3.2.5 gymnasium[other]
 
 # Copy Isaac Gym directory
@@ -79,7 +79,7 @@ COPY isaacgym/ ./isaacgym/
 
 # Isaac Gym Installation - Direct from folder
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     if [ -d "isaacgym/python" ]; then \
         echo "=== Installing Isaac Gym ===" && \
         echo "Found Isaac Gym directory: isaacgym/" && \
@@ -103,15 +103,15 @@ RUN mkdir -p output/imgs body_models/smpl
 
 # Set up the conda environment activation with proper library path
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate marlhsi" >> ~/.bashrc && \
+    echo "conda activate tokenhsi" >> ~/.bashrc && \
     echo "# Fix library path conflicts" >> ~/.bashrc && \
-    echo "export LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:/opt/conda/envs/marlhsi/lib\"" >> ~/.bashrc
+    echo "export LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:/opt/conda/envs/tokenhsi/lib\"" >> ~/.bashrc
 
 # Final installation verification with corrected library paths
 RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate marlhsi && \
+    conda activate tokenhsi && \
     # Temporarily fix library path for verification
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/conda/envs/marlhsi/lib" && \
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/conda/envs/tokenhsi/lib" && \
     echo "=== Installation Summary ===" && \
     echo "Python version: $(python --version)" && \
     echo "PyTorch version: $(python -c 'import torch; print(torch.__version__)')" && \
@@ -126,4 +126,4 @@ RUN source /opt/conda/etc/profile.d/conda.sh && \
     echo "Installation verification completed!"
 
 # Default command with proper environment setup
-CMD ["/bin/bash", "-c", "source /opt/conda/etc/profile.d/conda.sh && conda activate marlhsi && export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:/opt/conda/envs/marlhsi/lib\" && /bin/bash"] 
+CMD ["/bin/bash", "-c", "source /opt/conda/etc/profile.d/conda.sh && conda activate tokenhsi && export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:/opt/conda/envs/tokenhsi/lib\" && /bin/bash"] 

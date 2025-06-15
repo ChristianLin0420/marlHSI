@@ -121,15 +121,13 @@ params:
 
     # Wandb configuration
     wandb:
-      project: "tokenHSI-adaptation"
+      project: null  # Will be dynamically set based on task
       entity: null  # Set to your wandb username/team
-      name: "skill-adaptation-transformer"
+      name: null     # Will be dynamically set based on task
       tags: 
-        - "transformer"
-        - "adaptation"
-        - "humanoid"
         - "amp"
-      notes: "Training skill adaptation with transformer architecture"
+        - "humanoid"
+      notes: "Training humanoid skills with AMP"
       mode: "online"  # online, offline, or disabled
-      group: "adaptation"
+      group: null    # Will be dynamically set based on task type
       job_type: "train"

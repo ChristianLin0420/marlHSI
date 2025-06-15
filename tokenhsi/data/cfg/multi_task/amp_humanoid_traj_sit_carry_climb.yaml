@@ -3,21 +3,15 @@ use_wandb: True
 
 # Wandb configuration
 wandb:
-  project: "tokenHSI-multi-task"
+  project: null  # Will be dynamically set based on task
   entity: null  # Set to your wandb username/team
-  name: "multi-task-traj-sit-carry-climb"
+  name: null     # Will be dynamically set based on task
   tags: 
-    - "multi-task"
-    - "transformer"
-    - "humanoid"
     - "amp"
-    - "trajectory"
-    - "sit"
-    - "carry"
-    - "climb"
-  notes: "Training multi-task humanoid skills: trajectory, sit, carry, climb"
+    - "humanoid"
+  notes: "Training humanoid skills with AMP"
   mode: "online"  # online, offline, or disabled
-  group: "multi_task"
+  group: null    # Will be dynamically set based on task type
   job_type: "train"
 
 # Environment configuration

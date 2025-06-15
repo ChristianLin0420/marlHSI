@@ -3,9 +3,9 @@ use_wandb: True
 
 # Wandb configuration
 wandb:
-  project: "tokenHSI-humanoid-climb"
+  project: null  # Will be dynamically set based on task
   entity: null  # Set to your wandb username/team
-  name: "humanoid-climb-amp"
+  name: null     # Will be dynamically set based on task
   tags: 
     - "amp"
     - "humanoid"
@@ -13,7 +13,7 @@ wandb:
     - "basic_skill"
   notes: "Training humanoid climbing with AMP"
   mode: "online"  # online, offline, or disabled
-  group: "basic_skills"
+  group: null    # Will be dynamically set based on task type
   job_type: "train"
 
 # Environment configuration

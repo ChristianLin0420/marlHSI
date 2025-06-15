@@ -24,19 +24,61 @@ class WandbLogger:
 
             print(f"wandb_config: {wandb_config}")
             
+            # Get task information for dynamic naming
+            # Try different ways to get the task name - prioritize args.task
+            task_name = 'unknown'
+            
+            # Try to get task name from args first (most reliable)
+            if 'args' in config and hasattr(config['args'], 'task'):
+                task_name = config['args'].task
+            elif hasattr(config.get('args', {}), 'task'):
+                task_name = config.get('args', {}).task
+            elif 'name' in config:
+                task_name = config['name']
+            elif 'params' in config and 'config' in config['params'] and 'name' in config['params']['config']:
+                task_name = config['params']['config']['name']
+            
+            print(f"Detected task_name: {task_name}")
+            
+            # Generate dynamic project name if not specified
+            project_name = wandb_config.get('project')
+            if project_name is None:
+                project_name = self._generate_project_name(task_name)
+                print(f"Generated project_name: {project_name}")
+            
+            # Generate dynamic run name if not specified
+            run_name = wandb_config.get('name')
+            if run_name is None:
+                run_name = self._generate_run_name(task_name, config)
+                print(f"Generated run_name: {run_name}")
+            
+            # Generate dynamic group name if not specified
+            group_name = wandb_config.get('group')
+            if group_name is None:
+                group_name = self._generate_group_name(task_name)
+                print(f"Generated group_name: {group_name}")
+            
+            # Update tags with task-specific information
+            tags = list(wandb_config.get('tags', []))
+            task_tags = self._generate_task_tags(task_name)
+            tags.extend(tag for tag in task_tags if tag not in tags)
+            print(f"Final tags: {tags}")
+            
             # Initialize wandb
             self.run = wandb.init(
-                project=wandb_config.get('project', 'tokenHSI'),
+                project=project_name,
                 entity=wandb_config.get('entity', None),
-                name=wandb_config.get('name', config.get('name', 'unnamed_run')),
+                name=run_name,
                 config=config,
-                tags=wandb_config.get('tags', []),
+                tags=tags,
                 notes=wandb_config.get('notes', ''),
                 mode=wandb_config.get('mode', 'online'),  # online, offline, or disabled
-                group=wandb_config.get('group', None),
+                group=group_name,
                 job_type=wandb_config.get('job_type', 'train'),
-                reinit=wandb_config.get('reinit', True),
+                reinit=True,  # Always reinit to avoid conflicts
             )
+            
+            print(f"Wandb run initialized with name: {self.run.name}")
             
             # Define custom metrics for better visualization
             self._define_metrics()
@@ -64,9 +106,9 @@ class WandbLogger:
         wandb.define_metric("success/rate", summary="max")
         wandb.define_metric("success/precision", summary="max")
         
-        # Set step metric
-        wandb.define_metric("frame", step_metric="frame")
-        wandb.define_metric("epoch", step_metric="epoch")
+        # Don't define step metrics to avoid conflicts with existing logging
+        # wandb.define_metric("frame", step_metric="frame")
+        # wandb.define_metric("epoch", step_metric="epoch")
     
     def log_metrics(self, metrics: Dict[str, Any], step: Optional[int] = None, 
                    commit: bool = True):
@@ -101,7 +143,16 @@ class WandbLogger:
             elif isinstance(value, np.ndarray) and value.size == 1:
                 processed_metrics[key] = value.item()
         
-        wandb.log(processed_metrics, step=step, commit=commit)
+        # Log without explicit step to avoid conflicts
+        try:
+            if step is not None:
+                wandb.log(processed_metrics, step=step, commit=commit)
+            else:
+                wandb.log(processed_metrics, commit=commit)
+        except Exception as e:
+            # If there's a step conflict, log without step
+            print(f"Wandb step conflict, logging without step: {e}")
+            wandb.log(processed_metrics, commit=commit)
     
     def log_training_metrics(self, train_info: Dict[str, Any], frame: int, 
                            epoch: int, mean_rewards: Optional[torch.Tensor] = None,
@@ -122,8 +173,8 @@ class WandbLogger:
             return
         
         metrics = {
-            "frame": frame,
-            "epoch": epoch,
+            "training/frame": frame,
+            "training/epoch": epoch,
         }
         
         # Performance metrics
@@ -185,7 +236,8 @@ class WandbLogger:
                 if isinstance(task_rewards, torch.Tensor) and task_rewards.numel() > 0:
                     metrics[f"rewards/{task_name}"] = task_rewards.mean().item()
         
-        self.log_metrics(metrics, step=frame)
+        # Log without explicit step to avoid conflicts
+        self.log_metrics(metrics, step=None)
     
     def log_evaluation_metrics(self, eval_results: Dict[str, Any], frame: int):
         """
@@ -198,7 +250,7 @@ class WandbLogger:
         if not self.enabled:
             return
         
-        metrics = {"frame": frame}
+        metrics = {"evaluation/frame": frame}
         
         for exp_name, results in eval_results.items():
             prefix = f"eval/{exp_name}"
@@ -216,7 +268,8 @@ class WandbLogger:
             if 'fail_trials_because_terminate' in results:
                 metrics[f"{prefix}/fail_terminate"] = results['fail_trials_because_terminate']
         
-        self.log_metrics(metrics, step=frame)
+        # Log without explicit step to avoid conflicts
+        self.log_metrics(metrics, step=None)
     
     def log_video(self, video: np.ndarray, caption: str = "episode", 
                   fps: int = 30, step: Optional[int] = None):
@@ -232,9 +285,11 @@ class WandbLogger:
         if not self.enabled:
             return
         
-        wandb.log({
-            f"videos/{caption}": wandb.Video(video, fps=fps, format="mp4")
-        }, step=step)
+        video_data = {f"videos/{caption}": wandb.Video(video, fps=fps, format="mp4")}
+        # Log without explicit step to avoid conflicts
+        if step is not None:
+            video_data["video/frame"] = step
+        wandb.log(video_data)
     
     def log_histogram(self, values: torch.Tensor, name: str, 
                      step: Optional[int] = None):
@@ -249,9 +304,11 @@ class WandbLogger:
         if not self.enabled:
             return
         
-        wandb.log({
-            f"histograms/{name}": wandb.Histogram(values.cpu().numpy())
-        }, step=step)
+        hist_data = {f"histograms/{name}": wandb.Histogram(values.cpu().numpy())}
+        # Log without explicit step to avoid conflicts
+        if step is not None:
+            hist_data["histogram/frame"] = step
+        wandb.log(hist_data)
     
     def save_model(self, model_path: str, metadata: Optional[Dict[str, Any]] = None):
         """
@@ -297,4 +354,131 @@ class WandbLogger:
                 items.extend(self._flatten_dict(v, new_key, sep=sep).items())
             else:
                 items.append((new_key, v))
-        return dict(items) 
+        return dict(items)
+    
+    def _generate_project_name(self, task_name: str) -> str:
+        """Generate project name based on task."""
+        task_to_project = {
+            'HumanoidTraj': 'tokenHSI-trajectory',
+            'HumanoidSit': 'tokenHSI-sitting', 
+            'HumanoidCarry': 'tokenHSI-carrying',
+            'HumanoidClimb': 'tokenHSI-climbing',
+            'HumanoidTrajSitCarryClimb': 'tokenHSI-multi-task',
+            'HumanoidCompSitCarry': 'tokenHSI-skill-composition',
+            'HumanoidCompClimbCarry': 'tokenHSI-skill-composition',
+            'HumanoidCompTrajCarry': 'tokenHSI-skill-composition',
+            'HumanoidAdaptCarryBox2Objs': 'tokenHSI-adaptation',
+            'HumanoidAdaptTrajGround2Terrain': 'tokenHSI-adaptation',
+            'HumanoidAdaptCarryGround2Terrain': 'tokenHSI-adaptation',
+            'HumanoidLongTerm4BasicSkills': 'tokenHSI-longterm',
+        }
+        return task_to_project.get(task_name, f'tokenHSI-{task_name.lower()}')
+    
+    def _generate_run_name(self, task_name: str, config: Dict[str, Any]) -> str:
+        """Generate run name based on algorithm and configuration."""
+        
+        # Get algorithm name as the primary component - try different ways to access it
+        algo_name = 'basic'
+        if 'params' in config and 'algo' in config['params'] and isinstance(config['params']['algo'], dict):
+            algo_name = config['params']['algo'].get('name', 'unknown')
+        elif isinstance(config.get('algo'), dict):
+            algo_name = config.get('algo', {}).get('name', 'unknown')
+        elif hasattr(config.get('algo'), 'name'):
+            algo_name = getattr(config.get('algo'), 'name', 'unknown')
+        elif 'algo' in config and isinstance(config['algo'], str):
+            algo_name = config['algo']
+        
+        # Start with algorithm name as the base
+        base_name = algo_name.lower()
+        
+        # Add network architecture details
+        network_name = ''
+        try:
+            if 'params' in config and 'network' in config['params'] and isinstance(config['params']['network'], dict):
+                network_name = config['params']['network'].get('name', '')
+            elif isinstance(config.get('network'), dict):
+                network_name = config.get('network', {}).get('name', '')
+            elif hasattr(config.get('network'), 'name'):
+                network_name = getattr(config.get('network'), 'name', '')
+            elif 'network' in config and isinstance(config['network'], str):
+                network_name = config['network']
+        except (AttributeError, TypeError):
+            # If network is an object without get method, skip it
+            network_name = ''
+        
+        # Add architecture modifiers based on network name
+        if 'transformer' in network_name.lower():
+            base_name += '-transformer'
+        
+        # Add task type modifiers for multi-task or specialized tasks
+        if 'multi_task' in network_name.lower():
+            base_name += '-multi-task'
+        elif 'comp' in network_name.lower():
+            base_name += '-composition'
+        elif 'adapt' in network_name.lower():
+            base_name += '-adaptation'
+        elif 'longterm' in network_name.lower():
+            base_name += '-longterm'
+        else:
+            # For single task scenarios, add a simplified task identifier
+            if task_name.lower() != 'humanoid':
+                # Extract core task type from task name
+                task_identifier = ''
+                if 'traj' in task_name.lower():
+                    task_identifier = 'traj'
+                elif 'sit' in task_name.lower():
+                    task_identifier = 'sit'
+                elif 'carry' in task_name.lower():
+                    task_identifier = 'carry'
+                elif 'climb' in task_name.lower():
+                    task_identifier = 'climb'
+                
+                if task_identifier:
+                    base_name += f'-{task_identifier}'
+        
+        return base_name
+    
+    def _generate_group_name(self, task_name: str) -> str:
+        """Generate group name based on task type."""
+        if any(skill in task_name for skill in ['Traj', 'Sit', 'Carry', 'Climb']):
+            if 'Comp' in task_name:
+                return 'skill_composition'
+            elif 'Adapt' in task_name:
+                return 'adaptation'
+            elif 'LongTerm' in task_name:
+                return 'longterm'
+            elif any(multi in task_name for multi in ['TrajSitCarryClimb']):
+                return 'multi_task'
+            else:
+                return 'basic_skills'
+        return 'other'
+    
+    def _generate_task_tags(self, task_name: str) -> List[str]:
+        """Generate task-specific tags."""
+        tags = []
+        
+        # Add task type tags
+        if 'Traj' in task_name:
+            tags.append('trajectory')
+        if 'Sit' in task_name:
+            tags.append('sitting')
+        if 'Carry' in task_name:
+            tags.append('carrying')
+        if 'Climb' in task_name:
+            tags.append('climbing')
+        
+        # Add method tags
+        if 'Comp' in task_name:
+            tags.append('composition')
+        if 'Adapt' in task_name:
+            tags.append('adaptation')
+        if 'LongTerm' in task_name:
+            tags.append('longterm')
+        
+        # Add skill complexity
+        if any(multi in task_name for multi in ['TrajSitCarryClimb']):
+            tags.append('multi_task')
+        elif any(skill in task_name for skill in ['Traj', 'Sit', 'Carry', 'Climb']):
+            tags.append('basic_skill')
+        
+        return tags 

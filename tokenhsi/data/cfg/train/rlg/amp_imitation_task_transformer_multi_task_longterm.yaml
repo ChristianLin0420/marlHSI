@@ -119,16 +119,13 @@ params:
 
     # Wandb configuration
     wandb:
-      project: "tokenHSI-longterm"
+      project: null  # Will be dynamically set based on task
       entity: null  # Set to your wandb username/team
-      name: "longterm-task-completion"
+      name: null     # Will be dynamically set based on task
       tags: 
-        - "transformer"
-        - "longterm"
-        - "task-completion"
-        - "humanoid"
         - "amp"
-      notes: "Training long-term task completion with transformer architecture"
+        - "humanoid"
+      notes: "Training humanoid skills with AMP"
       mode: "online"  # online, offline, or disabled
-      group: "longterm"
+      group: null    # Will be dynamically set based on task type
       job_type: "train"

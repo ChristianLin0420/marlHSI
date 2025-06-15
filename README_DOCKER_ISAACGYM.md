@@ -68,7 +68,7 @@ docker run --rm -it --gpus all marlhsi:latest
 
 # Run training
 docker run --rm --gpus all -v $(pwd)/output:/workspace/marlhsi/output marlhsi:latest \
-    python tokenhsi/run.py --task HumanoidTraj --headless
+    python marlhsi/run.py --task HumanoidTraj --headless
 
 # Using docker-compose
 docker-compose up
@@ -81,8 +81,8 @@ docker run --rm --gpus all \
     -v $(pwd)/output:/workspace/marlhsi/output \
     -e WANDB_API_KEY=your_api_key \
     marlhsi:latest \
-    python tokenhsi/run.py --task HumanoidTraj \
-    --cfg_train tokenhsi/data/cfg/train/rlg/amp_imitation_task_wandb.yaml \
+    python marlhsi/run.py --task HumanoidTraj \
+    --cfg_train marlhsi/data/cfg/train/rlg/amp_imitation_task_wandb.yaml \
     --headless
 ```
 
@@ -154,7 +154,7 @@ Update your commands to use the published image:
 docker run --rm --gpus all \
     -v $(pwd)/output:/workspace/marlhsi/output \
     ${DOCKER_HUB_USERNAME}/${REPO_NAME}:latest \
-    python tokenhsi/run.py --task HumanoidTraj --headless
+    python marlhsi/run.py --task HumanoidTraj --headless
 
 # Update docker-compose.yml
 ```
@@ -275,7 +275,7 @@ A complete Docker environment for running marlHSI with Isaac Gym physics simulat
 ## Quick Start
 ```bash
 docker run --rm --gpus all your-username/marlhsi:latest \
-    python tokenhsi/run.py --task HumanoidTraj --headless
+    python marlhsi/run.py --task HumanoidTraj --headless
 ```
 
 ## Documentation
@@ -489,7 +489,7 @@ docker run --rm --gpus all \
     --ulimit memlock=-1 \
     --ulimit stack=67108864 \
     marlhsi:latest \
-    python tokenhsi/run.py --task HumanoidTraj --num_envs 2048 --headless
+    python marlhsi/run.py --task HumanoidTraj --num_envs 2048 --headless
 ```
 
 ## Development Workflow
@@ -518,7 +518,7 @@ services:
     command: >
       bash -c "source /opt/conda/etc/profile.d/conda.sh && 
                conda activate marlhsi && 
-               python tokenhsi/run.py --task HumanoidTraj --headless"
+               python marlhsi/run.py --task HumanoidTraj --headless"
 ```
 
 ## Technical Details
